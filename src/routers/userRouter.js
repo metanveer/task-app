@@ -58,7 +58,7 @@ router.get("/users/me", auth, async (req, res) => {
 
 router.patch("/users/me", auth, async (req, res) => {
   const updatesAllowed = ["name", "email", "password", "age"];
-  const updates = Object.keys(req.userBody);
+  const updates = Object.keys(req.body);
 
   const isAllowedOperation = updates.every((item) =>
     updatesAllowed.includes(item)
@@ -68,21 +68,8 @@ router.patch("/users/me", auth, async (req, res) => {
     return res.status(400).send({ error: "Invalid updates!" });
 
   try {
-    // const user = await User.findById(req.params.id);
-
-    updates.forEach((item) => (req.user[item] = req.userBody[item]));
-
+    updates.forEach((item) => (req.user[item] = req.body[item]));
     await req.user.save();
-
-    // const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-    //   new: true,
-    //   runValidators: true,
-    // }); // this code don't use middlewares to update db data
-
-    // if (!user) {
-    //   return res.status(404).send();
-    // }
-
     res.send(req.user);
   } catch (e) {
     res.status(400).send(e);
