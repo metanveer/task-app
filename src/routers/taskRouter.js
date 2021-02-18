@@ -17,18 +17,22 @@ router.post("/tasks", auth, async (req, res) => {
   }
 });
 
-router.get("/tasks", async (req, res) => {
+router.get("/tasks", auth, async (req, res) => {
   try {
-    const tasks = await Task.find({});
-    res.send(tasks);
+    // const tasks = await Task.find({ owner: req.user._id });
+    // res.send(tasks);
+    // Alternative:
+    await req.user.populate("tasks").execPopulate();
+    res.send(req.user.tasks);
   } catch (e) {
     res.status(500).send("Server error :(");
   }
 });
 
-router.get("/tasks/:id", async (req, res) => {
+router.get("/tasks/:id", auth, async (req, res) => {
+  const _id = req.params.id;
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findOne({ _id, owner: req.user._id });
     if (!task) return res.status(404).send("No task found!");
     res.send(task);
   } catch (e) {
@@ -36,7 +40,7 @@ router.get("/tasks/:id", async (req, res) => {
   }
 });
 
-router.patch("/tasks/:id", async (req, res) => {
+router.patch("/tasks/:id", auth, async (req, res) => {
   const allowedKeys = ["description", "completed"];
   const updatedTask = req.body;
   const keysofUpdatedTask = Object.keys(updatedTask);
@@ -49,9 +53,14 @@ router.patch("/tasks/:id", async (req, res) => {
     return res.status(400).send({ error: "Invalid updates!" });
 
   try {
-    const taskNeedtoUpdate = await Task.findById(req.params.id);
+    const taskNeedtoUpdate = await Task.findOne({
+      _id: req.params.id,
+      owner: req.user._id,
+    });
 
     //we need to update the taskNeedtoUpdate according to updatedTask and save the updated document
+    if (!taskNeedtoUpdate)
+      return res.status(404).send("Requested task does not exist!");
 
     keysofUpdatedTask.forEach((element) => {
       taskNeedtoUpdate[element] = updatedTask[element];
@@ -64,17 +73,18 @@ router.patch("/tasks/:id", async (req, res) => {
     //   runValidators: true,
     // });
 
-    if (!taskNeedtoUpdate)
-      return res.status(404).send("Requested task does not exist!");
     res.send(taskNeedtoUpdate);
   } catch (e) {
     res.status(404).send("Invalid Task ID to update");
   }
 });
 
-router.delete("/tasks/:id", async (req, res) => {
+router.delete("/tasks/:id", auth, async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
+    const task = await Task.findOneAndDelete({
+      _id: req.params.id,
+      owner: req.user._id,
+    });
     if (!task) return res.status(404).send("Task not found!");
     res.send(task);
   } catch (e) {

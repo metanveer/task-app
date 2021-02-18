@@ -3,6 +3,7 @@ const { Schema } = mongoose;
 const validator = require("validator");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const Task = require("./taskModel");
 
 const userSchema = new Schema({
   name: {
@@ -51,7 +52,15 @@ const userSchema = new Schema({
   ],
 });
 
+userSchema.virtual("tasks", {
+  ref: "Task",
+  localField: "_id",
+  foreignField: "owner",
+});
+
 //Whatever we put after userSchema.methods. that will be available as user.generateAuthToken i.e will be available as method of instances of User model. This is also called instance method.
+
+//In JavaScript, the JSON.stringify() function looks for functions named toJSON in the object being serialized. If an object has a toJSON function, JSON.stringify() calls toJSON() and serializes the return value from toJSON() instead. https://thecodebarbarian.com/what-is-the-tojson-function-in-javascript.html Express's res.send() uses JSON.stringify() behind the scene.
 
 userSchema.methods.toJSON = function () {
   const user = this;
@@ -98,6 +107,41 @@ userSchema.pre("save", async function (next) {
     user.password = await bcrypt.hash(user.password, 8);
   }
 
+  next();
+});
+
+// // userSchema.pre(
+// //   "remove",
+// //   { query: true, document: false },
+// //   async function (next) {
+// //     const user = this;
+
+// //     console.log(user);
+
+// //     try {
+// //       console.log("just before deleting");
+// //       const deletedTasks = await Task.deleteMany({
+// //         description: "nasif task 1",
+// //       });
+
+// //       console.log("just after deleting");
+// //       console.log("after deleting", deletedTasks);
+// //     } catch (error) {
+// //       console.log(e);
+// //     }
+
+// //     next();
+// //   }
+// // );
+
+// userSchema.post("remove", (user) => {
+//   Task.remove({ description: "something" });
+// });
+
+//Delete user tasks when user is removed
+userSchema.pre("remove", async function (next) {
+  const user = this;
+  await Task.deleteMany({ owner: user._id });
   next();
 });
 
