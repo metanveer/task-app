@@ -1,14 +1,17 @@
 const express = require("express");
 const multer = require("multer");
+const sharp = require("sharp");
 const auth = require("../middleware/auth");
 const router = new express.Router();
 const User = require("../models/userModel");
+const { sendWelcomeMail, sendDeleteMail } = require("../email/account");
 
 router.post("/users", async (req, res) => {
   const user = new User(req.body);
 
   try {
     await user.save();
+    sendWelcomeMail(user.name, user.email); //Working!!
     const token = await user.generateAuthToken();
     res.status(201).send({ user, token });
   } catch (error) {
@@ -45,7 +48,12 @@ router.post(
   auth,
   upload.single("avatar"),
   async (req, res) => {
-    req.user.avatar = req.file.buffer;
+    const buffer = await sharp(req.file.buffer)
+      .resize(250, 250)
+      .png()
+      .toBuffer();
+
+    req.user.avatar = buffer;
     await req.user.save();
     res.send();
   },
@@ -108,7 +116,7 @@ router.get("/users/:id/avatar", async (req, res) => {
       throw new Error("No user or user avatar found");
     }
 
-    res.set("Content-Type", "image/jpg");
+    res.set("Content-Type", "image/png");
     res.send(user.avatar);
   } catch (e) {
     res.status(404).send();
@@ -138,6 +146,7 @@ router.patch("/users/me", auth, async (req, res) => {
 router.delete("/users/me", auth, async (req, res) => {
   try {
     await req.user.remove({});
+    sendDeleteMail(req.user.name, req.user.email); //working!!
     res.send(req.user);
   } catch (e) {
     res.send(e);
