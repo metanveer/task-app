@@ -19,6 +19,33 @@ const port = process.env.PORT || 3000;
 //   res.status(503).send("Site is under maintenance. Pls check back soon...");
 // });
 
+const multer = require("multer");
+const upload = multer({
+  dest: "images",
+  limits: {
+    fileSize: 1000000,
+  },
+  fileFilter(req, file, cb) {
+    // if (!file.originalname.endsWith(".pdf")) {
+    //   return cb(new Error("Please uplodad a PDF"));
+    // }
+    //Alternative
+    if (!file.originalname.match(/\.(doc|docx)$/)) {
+      return cb(new Error("Please uplodad a PDF"));
+    }
+
+    cb(undefined, true);
+
+    // cb(new Error("File must be a PDF")); //If error occurs
+    //cb means callback
+    // cb(undefined, true)  //  Accepting the file
+    // cb(undefined, false) // Rejecting the file
+  },
+});
+app.post("/upload", upload.single("upload"), (req, res) => {
+  res.send();
+});
+
 app.use(express.json()); // a feature of express to perse the incomming json request in in http body
 app.use(userRouter);
 app.use(taskRouter);
